@@ -1,9 +1,10 @@
 const Product = require('../models/product');
+const User = require('../models/user')
 
 exports.getProducts = (req, res, next) => {
   Product.find()
     .then(products => {
-      console.log(products)
+      console.log(products);
       res.render('shop/product-list', {
         prods: products,
         pageTitle: 'All Products',
@@ -17,7 +18,7 @@ exports.getProducts = (req, res, next) => {
 
 exports.getProduct = (req, res, next) => {
   const prodId = req.params.productId;
-    Product.findById(prodId)
+  Product.findById(prodId)
     .then(product => {
       res.render('shop/product-detail', {
         product: product,
@@ -43,34 +44,37 @@ exports.getIndex = (req, res, next) => {
 };
 
 exports.getCart = (req, res, next) => {
-  req.user
-    .getCart()
-    .then(products => {
-            res.render('shop/cart', {
-            path: '/cart',
-            pageTitle: 'Your Cart',
-            products: products
-          });
+  User.findById(req.user._id) // Fetch the user by their ID
+    .populate('cart.items.productId') // Populate the 'productId' field in the 'cart.items' array
+    .exec()
+    .then(user => {
+      const products = user.cart.items;
+      res.render('shop/cart', {
+        path: '/cart',
+        pageTitle: 'Your Cart',
+        products: products
+      });
     })
     .catch(err => console.log(err));
 };
 
+
 exports.postCart = (req, res, next) => {
   const prodId = req.body.productId;
-  Product.findById(prodId).then((product) => {
-    req.user.addToCart(product)
-  }).then((result) => {
-    console.log(result)
-    res.redirect('/cart')
-  }).catch((err) => {
-    console.log(err)
-  })
+  Product.findById(prodId)
+    .then(product => {
+      return req.user.addToCart(product);
+    })
+    .then(result => {
+      console.log(result);
+      res.redirect('/cart');
+    });
 };
 
 exports.postCartDeleteProduct = (req, res, next) => {
   const prodId = req.body.productId;
   req.user
-   .deleteItemFromCart(prodId)
+    .deleteItemFromCart(prodId)
     .then(result => {
       res.redirect('/cart');
     })
@@ -79,7 +83,8 @@ exports.postCartDeleteProduct = (req, res, next) => {
 
 exports.postOrder = (req, res, next) => {
   let fetchedCart;
-  req.user.addOrder()
+  req.user
+    .addOrder()
     .then(result => {
       res.redirect('/orders');
     })
